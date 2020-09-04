@@ -10,7 +10,7 @@ using OpenCVForUnity.ImgprocModule;
 using OpenCVForUnity.UtilsModule;
 using OpenCVForUnity.UnityUtils;
 
-public class WindSockCV : MonoBehaviour
+public class WindSockCVClient : MonoBehaviour
 {
     internal Boolean socketReady = false;
     TcpClient mySocket;
