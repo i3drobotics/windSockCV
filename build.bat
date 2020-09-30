@@ -14,7 +14,7 @@ mkdir %build_path%
 mkdir install
 :: build library
 cd build
-cmake -G "Visual Studio 15 2017 Win64" -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="../install" -DOpenCV_DIR="%build_path_slash%/../3rdparty/opencv-3.4.10/opencv/build" ..
+cmake -G "Visual Studio 16 2019" -A x64 -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX="../install" -DOpenCV_DIR="%build_path_slash%/../3rdparty/opencv-3.4.10/opencv/build" ..
 :: install library
 cmake --build . --config Release --target install
 

@@ -13,18 +13,20 @@
 
 #include "convertimage.h"
 
-#define IMG_WIDTH 640
-#define IMG_HEIGHT 480
+#define IMG_WIDTH 1920
+#define IMG_HEIGHT 1080
  
 using namespace std;
  
 #pragma comment (lib, "Ws2_32.lib")
 
-#define DEFAULT_BUFLEN 500000
+#define DEFAULT_BUFLEN 999000
 //#define IP_ADDRESS "192.168.56.1"
 //#define DEFAULT_PORT "3504"
 #define IP_ADDRESS "127.0.0.1"
 #define DEFAULT_PORT "8000"
+
+std::string collectivemsg = "";
 
 struct client_type
 {
@@ -61,15 +63,19 @@ int process_client(client_type &new_client)
             if (iResult != SOCKET_ERROR){
                 if (new_client.id == 1){
                     std::string msg = new_client.received_message;
-                    if (!msg.empty() && msg[msg.length()-1] == '\n') {
-                        msg.erase(msg.length()-1);
-                    }
-                    cv::Mat image = str2Mat(msg);
-                    if (image.size().width > 0 && image.size().height > 0){
-                        cv::imshow("receive", image);
-                    } else {
-                        cout << "Image is empty" << endl;
-                        //cout << new_client.received_message << endl;
+                    collectivemsg += msg;
+                    if (!collectivemsg.empty() && collectivemsg[collectivemsg.length()-1] == '\n') {
+                        collectivemsg.erase(collectivemsg.length()-1);
+                        if (!collectivemsg.empty()){
+                            cv::Mat image = str2Mat(collectivemsg);
+                            collectivemsg = "";
+                            if (image.size().width > 0 && image.size().height > 0){
+                                cv::imshow("receive", image);
+                            } else {
+                                cout << "Image is empty" << endl;
+                                //cout << new_client.received_message << endl;
+                            }
+                        }
                     }
                     cv::waitKey(1);
                     //cout << new_client.received_message << endl;
@@ -170,7 +176,7 @@ int main()
  
         thread my_thread(process_client, client);
 
-        cv::VideoCapture capture("D:\\Users\\monke\\OneDrive - i3d Robotics Ltd\\Stereo Theatre\\vids\\Clip.mp4");
+        cv::VideoCapture capture("D:\\HOME\\OneDrive - i3d Robotics Ltd\\Stereo Theatre\\vids\\Clip.mp4");
         cv::Mat image;
  
         while (1)
@@ -182,7 +188,7 @@ int main()
                     image.convertTo(image,CV_8UC1);
                     cv::imshow("send",image);
                     sent_message = mat2Str(image);
-                    //cout << send_message << std:endl;
+                    //cout << sent_message << std:endl;
                     std::cout << "Sending message of size: " << sent_message.size() << std::endl;
                     cv::waitKey(10);
                 } else {
