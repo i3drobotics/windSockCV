@@ -14,12 +14,15 @@
 
 #include "convertimage.h"
 #include "serversettings.h"
+
+#include <chrono>
  
 using namespace std;
  
 #pragma comment (lib, "Ws2_32.lib")
 
 std::string collectivemsgs[MAX_CLIENTS] = {"","","","",""};
+std::chrono::steady_clock::time_point prevtime;
 
 struct client_type
 {
@@ -71,8 +74,15 @@ int process_client(client_type &new_client)
                             } else {
                                 display_image = image;
                             }
+                            std::chrono::steady_clock::time_point time = std::chrono::steady_clock::now();
+                            int dur_ms = std::chrono::duration_cast<std::chrono::microseconds>(time - prevtime).count();
+                            float dur_s = dur_ms/1000000.0;
+                            std::cout << "Time difference: " << dur_ms << "[us]" << std::endl;
+                            float fps = 1.0/dur_s;
+                            std::cout << "FPS: " << fps << std::endl;
                             cv::imshow("test", display_image);
                             cv::waitKey(1);
+                            prevtime = time;
                         } else {
                             cout << "Full message: " << collectivemsgs[new_client.id] << endl;
                         }
