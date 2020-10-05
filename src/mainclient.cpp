@@ -6,33 +6,26 @@
 
 #include "base64.h"
 #include "sha1.h"
+#include "cvsupport.h"
 
 #include <opencv2/core/core.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
 #include "convertimage.h"
-
-#define IMG_WIDTH 1920
-#define IMG_HEIGHT 1080
+#include "serversettings.h"
  
 using namespace std;
  
 #pragma comment (lib, "Ws2_32.lib")
 
-#define DEFAULT_BUFLEN 999000
-//#define IP_ADDRESS "192.168.56.1"
-//#define DEFAULT_PORT "3504"
-#define IP_ADDRESS "127.0.0.1"
-#define DEFAULT_PORT "8000"
-
-std::string collectivemsg = "";
+std::string collectivemsgs[MAX_CLIENTS] = {"","","","",""};
 
 struct client_type
 {
     SOCKET socket;
     int id;
-    char received_message[DEFAULT_BUFLEN];
+    bool isImageReader;
 };
 
 cv::Mat str2Mat(std::string encoded){
@@ -52,37 +45,48 @@ int main();
  
 int process_client(client_type &new_client)
 {
+    char received_message[DEFAULT_BUFLEN];
     while (1)
     {
-        memset(new_client.received_message, 0, DEFAULT_BUFLEN);
+        memset(received_message, 0, DEFAULT_BUFLEN);
  
         if (new_client.socket != 0)
         {
-            int iResult = recv(new_client.socket, new_client.received_message, DEFAULT_BUFLEN, 0);
+            int iResult = recv(new_client.socket, received_message, DEFAULT_BUFLEN, 0);
  
             if (iResult != SOCKET_ERROR){
-                if (new_client.id == 1){
-                    std::string msg = new_client.received_message;
-                    collectivemsg += msg;
-                    if (!collectivemsg.empty() && collectivemsg[collectivemsg.length()-1] == '\n') {
-                        collectivemsg.erase(collectivemsg.length()-1);
-                        if (!collectivemsg.empty()){
-                            cv::Mat image = str2Mat(collectivemsg);
-                            collectivemsg = "";
-                            if (image.size().width > 0 && image.size().height > 0){
-                                cv::imshow("receive", image);
+                std::string msg = received_message;
+                collectivemsgs[new_client.id] += msg;
+                if (!collectivemsgs[new_client.id].empty() && msg[msg.length()-1] == '\n') {
+                    // remove new line character from end of string
+                    collectivemsgs[new_client.id].erase(collectivemsgs[new_client.id].length()-1);
+                    // check string is not empty
+                    if (!collectivemsgs[new_client.id].empty()){
+                        cout << "Message received of size: " << collectivemsgs[new_client.id].size() << endl;
+                        if (new_client.isImageReader){
+                            cv::Mat image = str2Mat(collectivemsgs[new_client.id]);
+                            cv::Mat display_image;
+                            if (image.type() == CV_32FC1){
+                                CVSupport::disparity2colormap(image,display_image);
                             } else {
-                                cout << "Image is empty" << endl;
-                                //cout << new_client.received_message << endl;
+                                display_image = image;
                             }
+                            cv::imshow("test", display_image);
+                            cv::waitKey(1);
+                        } else {
+                            cout << "Full message: " << collectivemsgs[new_client.id] << endl;
                         }
+
+                        collectivemsgs[new_client.id] = "";
+                    } else {
+                        cout << "Message is empty after removing newline" << endl;
                     }
-                    cv::waitKey(1);
-                    //cout << new_client.received_message << endl;
+                } else if (collectivemsgs[new_client.id].size() >= collectivemsgs[new_client.id].max_size()){
+                    // reset string if exeedingly large
+                    collectivemsgs[new_client.id] = "";
                 } else {
-                    //cout << new_client.received_message << endl;
+                    //cout << "Message segment: " << msg << endl;
                 }
-                //cout << new_client.received_message << endl;
             }
             else
             {
@@ -100,10 +104,11 @@ int process_client(client_type &new_client)
  
 int main()
 {
+    bool isImageReader = true;
     WSAData wsa_data;
     struct addrinfo *result = NULL, *ptr = NULL, hints;
     string sent_message = "";
-    client_type client = { INVALID_SOCKET, -1, "" };
+    client_type client = { INVALID_SOCKET, -1, isImageReader};
     int iResult = 0;
     string message;
  
@@ -163,42 +168,27 @@ int main()
         system("pause");
         return 1;
     }
+   
  
     cout << "Successfully Connected" << endl;
  
     //Obtain id from server for this client;
-    recv(client.socket, client.received_message, DEFAULT_BUFLEN, 0);
-    message = client.received_message;
+    char received_message[DEFAULT_BUFLEN];
+    recv(client.socket, received_message, DEFAULT_BUFLEN, 0);
+    message = received_message;
  
     if (message != "Server is full")
     {
-        client.id = atoi(client.received_message);
+        client.id = atoi(received_message);
  
         thread my_thread(process_client, client);
 
-        cv::VideoCapture capture("D:\\HOME\\OneDrive - i3d Robotics Ltd\\Stereo Theatre\\vids\\Clip.mp4");
         cv::Mat image;
  
         while (1)
         {
-            if (client.id == 0){
-                bool ret = capture.read(image);
-                if (ret){
-                    cv::resize(image, image, cv::Size(IMG_WIDTH, IMG_HEIGHT));
-                    image.convertTo(image,CV_8UC1);
-                    cv::imshow("send",image);
-                    sent_message = mat2Str(image);
-                    //cout << sent_message << std:endl;
-                    std::cout << "Sending message of size: " << sent_message.size() << std::endl;
-                    cv::waitKey(10);
-                } else {
-                    capture.set(cv::CAP_PROP_POS_FRAMES, 0);
-                    cout << "Restarting video" << endl;
-                }
-            } else {
-                getline(cin, sent_message);
-                Sleep(100);
-            }
+            getline(cin, sent_message);
+            Sleep(100);
 
             iResult = send(client.socket, sent_message.c_str(), strlen(sent_message.c_str()), 0);
  
@@ -213,7 +203,7 @@ int main()
         my_thread.detach();
     }
     else
-        cout << client.received_message << endl;
+        cout << received_message << endl;
  
     cout << "Shutting down socket..." << endl;
     iResult = shutdown(client.socket, SD_SEND);
@@ -227,6 +217,7 @@ int main()
  
     closesocket(client.socket);
     WSACleanup();
-    //system("pause");
+
+    system("pause");
     return 0;
 }

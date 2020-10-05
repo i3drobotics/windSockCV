@@ -4,14 +4,10 @@
 #include <string>
 #include <thread>
 #include <vector>
+
+#include "serversettings.h"
  
 #pragma comment (lib, "Ws2_32.lib")
-
-#define DEFAULT_BUFLEN 999000
-//#define IP_ADDRESS "192.168.56.1"
-//#define DEFAULT_PORT "3504"
-#define IP_ADDRESS "127.0.0.1"
-#define DEFAULT_PORT "8000"
  
 struct client_type
 {
@@ -20,7 +16,6 @@ struct client_type
 };
  
 const char OPTION_VALUE = 1;
-const int MAX_CLIENTS = 5;
  
 //Function Prototypes
 int process_client(client_type &new_client, std::vector<client_type> &client_array, std::thread &thread);
@@ -44,13 +39,15 @@ int process_client(client_type &new_client, std::vector<client_type> &client_arr
  
             if (iResult != SOCKET_ERROR)
             {
-                if (strcmp("", tempmsg))
-                    //msg = "Client #" + std::to_string(new_client.id) + ": " + tempmsg;
+                msg = tempmsg;
+                /*
+                if (strcmp("", tempmsg)){
                     msg = tempmsg + endlch;
-                    //msg = tempmsg;
- 
-                //std::cout << msg.c_str() << std::endl;
- 
+                }
+                */
+
+                //std::cout << msg << std::endl;
+                    
                 //Broadcast that message to the other clients
                 for (int i = 0; i < MAX_CLIENTS; i++)
                 {
@@ -197,5 +194,6 @@ int main()
     std::cout << "Program has ended successfully" << std::endl;
  
     system("pause");
+    
     return 0;
 }

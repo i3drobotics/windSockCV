@@ -1,0 +1,4 @@
+#define DEFAULT_BUFLEN 65535
+#define IP_ADDRESS "127.0.0.1"
+#define DEFAULT_PORT "8000"
+#define MAX_CLIENTS 5
