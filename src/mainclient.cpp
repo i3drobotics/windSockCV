@@ -68,6 +68,7 @@ int process_client(client_type &new_client)
                         cout << "Message received of size: " << collectivemsgs[new_client.id].size() << endl;
                         if (new_client.isImageReader){
                             cv::Mat image = str2Mat(collectivemsgs[new_client.id]);
+                            cv::resize(image, image, cv::Size(), 0.25, 0.25);
                             cv::Mat display_image;
                             if (image.type() == CV_32FC1){
                                 CVSupport::disparity2colormap(image,display_image);
